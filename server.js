@@ -1,18 +1,17 @@
 import express from 'express';
 import cors from 'cors';
 import { initDb } from './config/db.js';
+import authRoutes from './routes/auth.js';
+import characterRoutes from './routes/characters.js';
+import leaderboardRoutes from './routes/leaderboard.js';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Allow CORS for all origins so Hostinger frontend can communicate
 app.use(cors());
 app.use(express.json());
 
-// Initialize Database
-await initDb();
-
-// Health Check Endpoint for Frontend
+// Base Health Check Routes
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Server is healthy and running' });
 });
@@ -21,11 +20,7 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Server is healthy and running' });
 });
 
-// Import and use routes
-import authRoutes from './routes/auth.js';
-import characterRoutes from './routes/characters.js';
-import leaderboardRoutes from './routes/leaderboard.js';
-
+// App Routes
 app.use('/auth', authRoutes);
 app.use('/api/auth', authRoutes);
 
@@ -35,6 +30,14 @@ app.use('/api/characters', characterRoutes);
 app.use('/leaderboard', leaderboardRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Start server after DB init
+initDb().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}).catch(err => {
+  console.error('Failed to init DB:', err);
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT} (DB init failed)`);
+  });
 });
