@@ -1,8 +1,8 @@
-const express = require('express');
-const cors = require('cors');
-const { createClient } = require('@supabase/supabase-js');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
+import express from 'express';
+import cors from 'cors';
+import { createClient } from '@supabase/supabase-js';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -16,7 +16,7 @@ app.use(cors({
 }));
 
 // Supabase Configuration
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://efwlvnqnygnchbefjtyb.supabase.co';
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const JWT_SECRET = process.env.JWT_SECRET || 'oliviplay_super_secret_jwt_key_2026';
 
@@ -25,7 +25,7 @@ if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
   supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 }
 
-// 1. Root & Health Check Routes (Cannot GET / பிழையைத் தடுக்கும்)
+// 1. Root & Health Check Routes
 app.get('/', (req, res) => {
   res.json({
     status: 'online',
@@ -47,7 +47,6 @@ app.post('/api/auth/signup', async (req, res) => {
     }
 
     if (!supabase) {
-      // Local fallback token if Supabase keys are not set yet
       const token = jwt.sign({ username, role: 'player' }, JWT_SECRET, { expiresIn: '7d' });
       return res.json({ token, user: { username, email, role: 'player' } });
     }
@@ -145,6 +144,6 @@ app.get('/api/missions', async (req, res) => {
 });
 
 // Start Server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
