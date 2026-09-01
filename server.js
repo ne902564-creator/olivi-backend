@@ -7,13 +7,14 @@ import bcrypt from 'bcryptjs';
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Middleware
-app.use(express.json());
+// All Domain CORS Allow (லாகின் தடுப்பை முழுமையாக நீக்கும்)
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+app.use(express.json());
 
 // Supabase Configuration
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
@@ -25,20 +26,16 @@ if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
   supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 }
 
-// 1. Root & Health Check Routes
+// Health Check
 app.get('/', (req, res) => {
-  res.json({
-    status: 'online',
-    message: 'OliviPlay Game Backend API is running successfully!',
-    timestamp: new Date().toISOString()
-  });
+  res.json({ status: 'ok', message: 'OliviPlay Backend is fully live and running' });
 });
 
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, status: 'healthy' });
 });
 
-// 2. User Signup Route
+// Signup Route
 app.post('/api/auth/signup', async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -52,16 +49,13 @@ app.post('/api/auth/signup', async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const { data: user, error: userError } = await supabase
       .from('players')
       .insert([{ username, email, password_hash: hashedPassword, role: 'player', level: 1, xp: 0 }])
       .select()
       .single();
 
-    if (userError) {
-      return res.status(400).json({ error: userError.message });
-    }
+    if (userError) return res.status(400).json({ error: userError.message });
 
     const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, user });
@@ -70,7 +64,7 @@ app.post('/api/auth/signup', async (req, res) => {
   }
 });
 
-// 3. User Login Route
+// Login Route
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -89,14 +83,10 @@ app.post('/api/auth/login', async (req, res) => {
       .eq('username', username)
       .single();
 
-    if (error || !user) {
-      return res.status(400).json({ error: 'Invalid username or password.' });
-    }
+    if (error || !user) return res.status(400).json({ error: 'Invalid username or password.' });
 
     const validPass = await bcrypt.compare(password, user.password_hash);
-    if (!validPass) {
-      return res.status(400).json({ error: 'Invalid username or password.' });
-    }
+    if (!validPass) return res.status(400).json({ error: 'Invalid username or password.' });
 
     const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, user });
@@ -105,7 +95,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// 4. Current Player Profile
+// Current Player Info
 app.get('/api/players/me', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'No token provided.' });
@@ -114,7 +104,7 @@ app.get('/api/players/me', async (req, res) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     if (!supabase) {
-      return res.json({ username: decoded.username, role: decoded.role || 'player', level: 1, xp: 0, currency: 50 });
+      return res.json({ username: decoded.username, role: decoded.role || 'player', level: 1, xp: 0, currency: 100 });
     }
 
     const { data: player, error } = await supabase
@@ -126,24 +116,16 @@ app.get('/api/players/me', async (req, res) => {
     if (error || !player) return res.status(404).json({ error: 'Player profile not found.' });
     res.json(player);
   } catch (err) {
-    res.status(401).json({ error: 'Invalid or expired token.' });
+    res.status(401).json({ error: 'Invalid token.' });
   }
 });
 
-// 5. Missions List
 app.get('/api/missions', async (req, res) => {
   res.json([
-    {
-      id: 'mission_supply_run',
-      title: 'Supply Run',
-      description: 'Deliver spare parts across Olividiyal City to earn XP and rewards.',
-      reward_xp: 50,
-      reward_currency: 20
-    }
+    { id: 'm1', title: 'Supply Run', description: 'Deliver parts across 3D city', reward_xp: 50, reward_currency: 20 }
   ]);
 });
 
-// Start Server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
