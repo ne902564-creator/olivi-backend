@@ -7,15 +7,12 @@ import bcrypt from 'bcryptjs';
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// 1. CORS Configuration (Allows all domains and handles preflight OPTIONS)
+// CORS - Allows all origins
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-
-// Explicit Preflight Handler
-app.options('*', cors());
 
 app.use(express.json());
 
@@ -29,9 +26,13 @@ if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
   supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 }
 
-// 2. Health & Root Routes
+// 1. Root & Health Check Routes (Cannot GET /api பிழையைத் தடுக்கும்)
 app.get('/', (req, res) => {
-  res.json({ status: 'ok', message: 'OliviPlay Backend API is live' });
+  res.json({ status: 'ok', message: 'OliviPlay Backend is fully live and running' });
+});
+
+app.get('/api', (req, res) => {
+  res.json({ status: 'ok', message: 'OliviPlay API root is working' });
 });
 
 app.get('/health', (req, res) => {
@@ -42,7 +43,7 @@ app.get('/api/health', (req, res) => {
   res.json({ ok: true, status: 'healthy' });
 });
 
-// 3. User Signup Route
+// 2. User Signup Route
 app.post('/api/auth/signup', async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -71,7 +72,7 @@ app.post('/api/auth/signup', async (req, res) => {
   }
 });
 
-// 4. User Login Route
+// 3. User Login Route
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -102,7 +103,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// 5. Current Player Profile
+// 4. Current Player Profile
 app.get('/api/players/me', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'No token provided.' });
@@ -127,7 +128,7 @@ app.get('/api/players/me', async (req, res) => {
   }
 });
 
-// 6. Character Selection & Missions Fallbacks
+// 5. Characters & Missions
 app.get('/api/characters', async (req, res) => {
   res.json([
     { slug: 'boodu', name: 'Boodu', title: 'The Street Racer', stats: { speed: 9, strength: 4, stamina: 6 }, abilities: ['Nitro Boost'] },
@@ -136,16 +137,13 @@ app.get('/api/characters', async (req, res) => {
   ]);
 });
 
-app.post('/api/players/me/character', async (req, res) => {
-  res.json({ success: true, characterSlug: req.body.characterSlug });
-});
-
 app.get('/api/missions', async (req, res) => {
   res.json([
-    { id: 'm1', title: 'Supply Run', description: 'Deliver spare parts across 3D city.', reward_xp: 50, reward_currency: 20 }
+    { id: 'm1', title: 'Supply Run', description: 'Deliver parts across 3D city.', reward_xp: 50, reward_currency: 20 }
   ]);
 });
 
+// Start Server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
