@@ -7,12 +7,15 @@ import bcrypt from 'bcryptjs';
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// All Domain CORS Allow (லாகின் தடுப்பை முழுமையாக நீக்கும்)
+// 1. CORS Configuration (Allows all domains and handles preflight OPTIONS)
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Explicit Preflight Handler
+app.options('*', cors());
 
 app.use(express.json());
 
@@ -26,16 +29,20 @@ if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
   supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 }
 
-// Health Check
+// 2. Health & Root Routes
 app.get('/', (req, res) => {
-  res.json({ status: 'ok', message: 'OliviPlay Backend is fully live and running' });
+  res.json({ status: 'ok', message: 'OliviPlay Backend API is live' });
+});
+
+app.get('/health', (req, res) => {
+  res.json({ ok: true, status: 'healthy' });
 });
 
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, status: 'healthy' });
 });
 
-// Signup Route
+// 3. User Signup Route
 app.post('/api/auth/signup', async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -64,7 +71,7 @@ app.post('/api/auth/signup', async (req, res) => {
   }
 });
 
-// Login Route
+// 4. User Login Route
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -95,7 +102,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Current Player Info
+// 5. Current Player Profile
 app.get('/api/players/me', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'No token provided.' });
@@ -120,9 +127,22 @@ app.get('/api/players/me', async (req, res) => {
   }
 });
 
+// 6. Character Selection & Missions Fallbacks
+app.get('/api/characters', async (req, res) => {
+  res.json([
+    { slug: 'boodu', name: 'Boodu', title: 'The Street Racer', stats: { speed: 9, strength: 4, stamina: 6 }, abilities: ['Nitro Boost'] },
+    { slug: 'thanishs', name: 'Thanishs', title: 'The Strategist', stats: { speed: 5, strength: 5, stamina: 7 }, abilities: ['Route Planning'] },
+    { slug: 'first-boobles', name: 'First Boobles', title: 'The Trailblazer', stats: { speed: 6, strength: 7, stamina: 8 }, abilities: ['Rally Cry'] }
+  ]);
+});
+
+app.post('/api/players/me/character', async (req, res) => {
+  res.json({ success: true, characterSlug: req.body.characterSlug });
+});
+
 app.get('/api/missions', async (req, res) => {
   res.json([
-    { id: 'm1', title: 'Supply Run', description: 'Deliver parts across 3D city', reward_xp: 50, reward_currency: 20 }
+    { id: 'm1', title: 'Supply Run', description: 'Deliver spare parts across 3D city.', reward_xp: 50, reward_currency: 20 }
   ]);
 });
 
